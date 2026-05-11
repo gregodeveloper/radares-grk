@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            background: transparent !important;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+        }
+
+        :root {
+            --acc1: #d1c3fc;
+            --acc2: #9bc4fc;
+            --acc-grad: linear-gradient(120deg, #d1c3fc 0%, #9bc4fc 100%);
+            --acc-grad-btn: linear-gradient(120deg, rgba(209,195,252,0.13) 0%, rgba(155,196,252,0.13) 100%);
+            --panel-bg: rgba(6,6,10,0.97);
+            --panel-border: rgba(255,255,255,0.07);
+            --surface: rgba(255,255,255,0.03);
+            --surface-hover: rgba(255,255,255,0.06);
+            --surface-border: rgba(255,255,255,0.05);
+            --text-main: rgba(235,235,245,0.90);
+            --text-muted: rgba(160,160,180,0.55);
+            --text-faint: rgba(130,130,155,0.35);
+            --green-bg: linear-gradient(120deg, rgba(28,130,60,0.85) 0%, rgba(16,88,40,0.92) 100%);
+            --green-border: rgba(40,160,75,0.25);
+            --red-bg: rgba(180,35,35,0.14);
+            --red-border: rgba(200,55,55,0.20);
+            --red-text: rgba(215,85,85,0.85);
+        }
+
+        /* ── PANEL PRINCIPAL ── */
+        .ui-wrap {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 330px;
+            display: none;
+            pointer-events: auto;
+        }
+        .ui-wrap.active { display: block; }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 13px 15px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            cursor: move;
+            user-select: none;
+            background: linear-gradient(90deg, rgba(209,195,252,0.05) 0%, rgba(155,196,252,0.02) 100%);
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header-pill { height: 6px; width: 22px; border-radius: 3px; background: var(--acc-grad); }
+        .header-title {
+            font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+            background: var(--acc-grad); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .header-hint { font-size: 9px; color: var(--text-faint); letter-spacing: 0.5px; }
+
+        .body { padding: 13px; }
+
+        /* ── BOTÃO NOVO RADAR ── */
+        .btn-new {
+            width: 100%; padding: 11px;
+            background: var(--green-bg); border: 1px solid var(--green-border);
+            border-radius: 9px; color: rgba(255,255,255,0.9);
+            font-family: inherit; font-size: 11px; font-weight: 700;
+            letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; margin-bottom: 11px;
+        }
+        .btn-new:hover { filter: brightness(1.1); }
+
+        /* ── TYPE SELECTOR ── */
+        .type-selector {
+            display: none; margin-bottom: 11px;
+            background: var(--surface); border: 1px solid var(--surface-border);
+            border-radius: 9px; padding: 11px;
+        }
+        .type-selector.show { display: block; }
+
+        .slabel {
+            font-size: 9px; font-weight: 600; letter-spacing: 1.5px;
+            text-transform: uppercase; color: var(--text-faint); margin-bottom: 8px;
+        }
+
+        .type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+
+        .type-btn {
+            padding: 11px 4px;
+            background: var(--surface); border: 1px solid var(--surface-border);
+            border-radius: 8px; color: var(--text-muted);
+            font-family: inherit; font-size: 12px; font-weight: 600;
+            cursor: pointer; text-align: center; transition: all 0.15s;
+        }
+        .type-btn:hover { background: var(--acc-grad-btn); border-color: rgba(209,195,252,0.22); color: var(--text-main); }
+        .type-btn.sel {
+            background: linear-gradient(120deg, rgba(209,195,252,0.16) 0%, rgba(155,196,252,0.16) 100%);
+            border-color: rgba(209,195,252,0.35); color: #d1c3fc;
+        }
+
+        /* ── RADAR LIST ── */
+        .radar-list { max-height: 260px; overflow-y: auto; }
+        .radar-list::-webkit-scrollbar { width: 2px; }
+        .radar-list::-webkit-scrollbar-thumb { background: rgba(209,195,252,0.12); border-radius: 2px; }
+
+        .radar-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 9px 11px; margin-bottom: 4px;
+            background: var(--surface); border: 1px solid var(--surface-border); border-radius: 8px;
+        }
+        .radar-item:hover { background: var(--surface-hover); }
+
+        .r-id {
+            font-size: 9px; font-weight: 700; letter-spacing: 1px;
+            background: var(--acc-grad); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .r-name { font-size: 11px; font-weight: 600; color: var(--text-main); margin: 1px 0; }
+        .r-coord { font-size: 9px; color: var(--text-faint); letter-spacing: 0.4px; }
+
+        .btn-del {
+            padding: 5px 10px; background: var(--red-bg); border: 1px solid var(--red-border);
+            border-radius: 6px; color: var(--red-text);
+            font-family: inherit; font-size: 10px; font-weight: 600; cursor: pointer; white-space: nowrap;
+        }
+        .btn-del:hover { filter: brightness(1.2); }
+
+        .empty { text-align: center; color: var(--text-faint); font-size: 11px; padding: 20px 0; }
+
+        /* ── CREATOR ── */
+        .stage-badge {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 5px 10px; border-radius: 20px;
+            font-size: 10px; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 11px;
+        }
+        .stage-badge.s1 { background: rgba(209,195,252,0.07); border: 1px solid rgba(209,195,252,0.15); color: #d1c3fc; }
+        .stage-badge.s2 { background: rgba(155,196,252,0.07); border: 1px solid rgba(155,196,252,0.15); color: #9bc4fc; }
+        .stage-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+        .ctrl-label {
+            font-size: 9px; font-weight: 600; letter-spacing: 1.5px;
+            text-transform: uppercase; color: var(--text-faint); margin-bottom: 7px;
+        }
+
+        .dpad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px; }
+
+        .cbtn {
+            padding: 8px 4px; background: var(--surface); border: 1px solid var(--surface-border);
+            border-radius: 6px; color: var(--text-muted);
+            font-family: inherit; font-size: 10px; font-weight: 600; cursor: pointer; text-align: center;
+        }
+        .cbtn:hover { background: var(--surface-hover); color: var(--text-main); }
+        .cbtn:active {
+            background: linear-gradient(120deg, rgba(209,195,252,0.14) 0%, rgba(155,196,252,0.14) 100%);
+            border-color: rgba(209,195,252,0.28); color: var(--acc1);
+        }
+
+        .divider { height: 1px; background: rgba(255,255,255,0.04); margin: 9px 0; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+
+        .size-block { background: var(--surface); border: 1px solid var(--surface-border); border-radius: 7px; padding: 8px 10px; }
+        .size-label { font-size: 9px; color: var(--text-faint); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+        .size-val {
+            font-size: 14px; font-weight: 700;
+            background: var(--acc-grad); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 5px;
+        }
+        .size-block input[type=range] {
+            width: 100%; height: 3px; border-radius: 2px;
+            background: rgba(255,255,255,0.08); outline: none; -webkit-appearance: none;
+        }
+        .size-block input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+            background: linear-gradient(135deg, #d1c3fc, #9bc4fc); cursor: pointer;
+        }
+
+        .btn-confirm {
+            width: 100%; padding: 11px; background: var(--green-bg); border: 1px solid var(--green-border);
+            border-radius: 9px; color: rgba(255,255,255,0.9);
+            font-family: inherit; font-size: 11px; font-weight: 700;
+            letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; margin-bottom: 5px;
+        }
+        .btn-confirm:hover { filter: brightness(1.1); }
+
+        .btn-cancel {
+            width: 100%; padding: 8px; background: transparent;
+            border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: var(--text-faint);
+            font-family: inherit; font-size: 10px; font-weight: 600;
+            letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+        }
+        .btn-cancel:hover { background: var(--red-bg); border-color: var(--red-border); color: var(--red-text); }
+
+        #zoneSection { display: none; }
+        #zoneSection.show { display: block; }
+
+        /* ── MODAL DE CONFIRMAÇÃO CUSTOMIZADO ── */
+        .modal-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(3px);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+
+        .modal-box {
+            background: rgba(10,10,16,0.98);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 22px 20px 18px;
+            width: 270px;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+
+        .modal-icon {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--red-bg); border: 1px solid var(--red-border);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 14px; font-size: 18px;
+        }
+
+        .modal-title {
+            font-size: 13px; font-weight: 700; color: var(--text-main);
+            letter-spacing: 0.3px; margin-bottom: 6px;
+        }
+
+        .modal-sub {
+            font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px;
+        }
+
+        .modal-sub span {
+            background: var(--acc-grad); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;
+        }
+
+        .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        .modal-btn-cancel {
+            padding: 9px; background: var(--surface); border: 1px solid var(--surface-border);
+            border-radius: 8px; color: var(--text-muted);
+            font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+        }
+        .modal-btn-cancel:hover { background: var(--surface-hover); color: var(--text-main); }
+
+        .modal-btn-confirm {
+            padding: 9px; background: var(--red-bg); border: 1px solid var(--red-border);
+            border-radius: 8px; color: var(--red-text);
+            font-family: inherit; font-size: 11px; font-weight: 700; cursor: pointer;
+        }
+        .modal-btn-confirm:hover { filter: brightness(1.3); }
+    </style>
+</head>
+<body>
+
+    <!-- ── MODAL DE CONFIRMAÇÃO ── -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-box">
+            <div class="modal-icon">🗑</div>
+            <div class="modal-title">Excluir radar</div>
+            <div class="modal-sub">Tem certeza que deseja excluir o radar <span id="modalRadarId">#0</span>?<br>Essa ação não pode ser desfeita.</div>
+            <div class="modal-actions">
+                <button class="modal-btn-cancel" onclick="closeDeleteModal()">Cancelar</button>
+                <button class="modal-btn-confirm" onclick="confirmDelete()">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── PAINEL PRINCIPAL ── -->
+    <div class="ui-wrap" id="radarUI">
+        <div class="panel">
+
+            <div class="header" id="dragHandle">
+                <div class="header-left">
+                    <div class="header-pill"></div>
+                    <span class="header-title">Radares</span>
+                </div>
+                <span class="header-hint">segurar para mover</span>
+            </div>
+
+            <div class="body">
+
+                <!-- LIST VIEW -->
+                <div id="listView">
+                    <button class="btn-new" onclick="showTypeSelector()">+ Novo Radar</button>
+
+                    <div class="type-selector" id="typeSelector">
+                        <div class="slabel">Selecione o tipo</div>
+                        <div class="type-grid">
+                            <button class="type-btn" onclick="selectType(50)"  id="tbtn50">50 km/h</button>
+                            <button class="type-btn" onclick="selectType(60)"  id="tbtn60">60 km/h</button>
+                            <button class="type-btn" onclick="selectType(80)"  id="tbtn80">80 km/h</button>
+                            <button class="type-btn" onclick="selectType(110)" id="tbtn110">110 km/h</button>
+                        </div>
+                    </div>
+
+                    <div class="radar-list" id="radarList">
+                        <div class="empty">Nenhum radar criado</div>
+                    </div>
+                </div>
+
+                <!-- CREATOR VIEW -->
+                <div id="creatorView" style="display:none;">
+                    <span class="stage-badge s1" id="stageBadge">
+                        <span class="stage-dot"></span>
+                        Etapa 1 — Posicionar placa
+                    </span>
+
+                    <div class="ctrl-label">Mover / Girar</div>
+                    <div class="dpad">
+                        <button class="cbtn" onclick="move('forward')">W ↑</button>
+                        <button class="cbtn" onclick="move('back')">S ↓</button>
+                        <button class="cbtn" onclick="move('up')">Alt +</button>
+                        <button class="cbtn" onclick="move('down')">Alt −</button>
+                        <button class="cbtn" onclick="move('left')">A ←</button>
+                        <button class="cbtn" onclick="move('right')">D →</button>
+                        <button class="cbtn" onclick="rotate('left')">◀ Rot</button>
+                        <button class="cbtn" onclick="rotate('right')">Rot ▶</button>
+                    </div>
+
+                    <div id="zoneSection">
+                        <div class="divider"></div>
+                        <div class="ctrl-label">Tamanho da zona</div>
+                        <div class="two-col">
+                            <div class="size-block">
+                                <div class="size-label">Largura</div>
+                                <div class="size-val" id="widthVal">8.0</div>
+                                <input type="range" id="widthSlider" min="2" max="30" value="8" step="0.5" oninput="updateSize()">
+                            </div>
+                            <div class="size-block">
+                                <div class="size-label">Profund.</div>
+                                <div class="size-val" id="depthVal">8.0</div>
+                                <input type="range" id="depthSlider" min="2" max="30" value="8" step="0.5" oninput="updateSize()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn-confirm" onclick="confirmPlacement()">✓ Confirmar</button>
+                    <button class="btn-cancel"  onclick="goBack()">✕ Cancelar</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="nui.js"></script>
+</body>
+</html>
